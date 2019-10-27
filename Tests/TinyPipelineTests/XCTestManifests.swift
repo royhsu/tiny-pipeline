@@ -1,0 +1,13 @@
+import XCTest
+
+#if !canImport(ObjectiveC)
+
+public func allTests() -> [XCTestCaseEntry] {
+    
+    [
+        testCase(PipelineTests.allTests),
+    ]
+    
+}
+
+#endif
