@@ -1,5 +1,6 @@
 // MARK: - FirstResolvedElementIterator
 
+/// The iterator will try to provide the next element if value is still unresolved.
 struct FirstResolvedElementIterator<Element, Output> {
     
     var elements: [Element]
@@ -10,7 +11,8 @@ struct FirstResolvedElementIterator<Element, Output> {
         
         let isValueResolved = (context().resolvedValue != nil)
         
-        return isValueResolved ? nil : elements.removeFirst()
+        if isValueResolved { return nil }
+        else { return elements.isEmpty ? nil : elements.removeFirst() }
         
     }
     

@@ -6,7 +6,7 @@ import XCTest
 
 final class FirstResolvedElementIteratorTests: XCTestCase {
     
-    func testGetNextElementWhenValueIsStillMissing() {
+    func testGetNextElementWhenValueIsStillUnresolved() {
         
         var iterator = FirstResolvedElementIterator(
             elements: [ 1, 2 ],
@@ -14,6 +14,14 @@ final class FirstResolvedElementIteratorTests: XCTestCase {
         )
         
         XCTAssertEqual(iterator.next(), 1)
+        
+        XCTAssertEqual(iterator.elements, [ 2 ])
+        
+        XCTAssertEqual(iterator.next(), 2)
+        
+        XCTAssert(iterator.elements.isEmpty)
+        
+        XCTAssertEqual(iterator.next(), nil)
         
     }
     
@@ -26,6 +34,8 @@ final class FirstResolvedElementIteratorTests: XCTestCase {
         
         XCTAssertEqual(iterator.next(), nil)
         
+        XCTAssertEqual(iterator.elements, [ 1, 2 ])
+        
     }
     
 }
@@ -33,7 +43,7 @@ final class FirstResolvedElementIteratorTests: XCTestCase {
 extension FirstResolvedElementIteratorTests {
     
     static var allTests = [
-        ("testGetNextElementWhenValueIsStillMissing", testGetNextElementWhenValueIsStillMissing),
+        ("testGetNextElementWhenValueIsStillUnresolved", testGetNextElementWhenValueIsStillUnresolved),
         ("testSkipRestOfElementsWhenValueGetsResolved", testSkipRestOfElementsWhenValueGetsResolved),
     ]
     
