@@ -5,6 +5,7 @@ import XCTest
 public func allTests() -> [XCTestCaseEntry] {
     
     [
+        testCase(FirstResolvedElementIteratorTests.allTests),
         testCase(PipelineTests.allTests),
     ]
     
