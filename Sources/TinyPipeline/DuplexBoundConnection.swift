@@ -4,9 +4,10 @@ import TinyCombine
 
 final class DuplexBoundConnection<Success, Failure> where Failure: Error {
 
-    /// The current inbound/outbound stream of duplex.
+    /// The current connected inbound/outbound stream of duplex.
     private(set) var currentBoundStream: AnyCancellable?
     
+    /// Storage for duplex bounds.
     private(set) var boundResultInfo: DuplexBoundResultInfo<Success, Failure> = [:]
     
     /// Connect to the given stream and automatically disconnect on
