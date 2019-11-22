@@ -19,7 +19,7 @@ final class DuplexBoundConnectionTests: XCTestCase {
     
     func testAutoconnectToDuplexBound() {
         
-        let didDisconnectDuplexBound = expectation(description: "Did disconnect from duplex bound.")
+        let didDisconnectDuplexBound = expectation(description: "Connection did disconnect from current duplex bound.")
         
         let connection = DuplexBoundConnection<Int, Error>()
         
