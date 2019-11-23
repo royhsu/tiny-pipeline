@@ -8,7 +8,7 @@ final class DuplexBoundConnection<Success, Failure> where Failure: Error {
     private(set) var currentBoundStream: AnyCancellable?
     
     /// Storage for duplex bounds.
-    private(set) var boundResultInfo: DuplexBoundResultInfo<Success, Failure> = [:]
+    private(set) var boundContext = DuplexBoundContext<Success, Failure>()
     
     /// Connect to the given stream and automatically disconnect on
     /// completion (either .finished or .failure).
@@ -44,14 +44,14 @@ final class DuplexBoundConnection<Success, Failure> where Failure: Error {
                     
                 case let .failure(error):
                     
-                    self.boundResultInfo[duplexID] = .failure(error)
-            
+                    self.boundContext.updateResult(.failure(error), id: duplexID)
+                    
                 }
                 
             },
             receiveValue: { value in
                 
-                self.boundResultInfo[duplexID] = .success(value)
+                self.boundContext.updateResult(.success(value), id: duplexID)
                 
             }
         )

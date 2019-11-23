@@ -13,8 +13,6 @@ final class DuplexBoundConnectionTests: XCTestCase {
         
         XCTAssertNil(connection.currentBoundStream)
         
-        XCTAssert(connection.boundResultInfo.isEmpty)
-        
     }
     
     func testAutoconnectToDuplexBound() {
@@ -36,7 +34,10 @@ final class DuplexBoundConnectionTests: XCTestCase {
                 
                 do {
                 
-                    let value = try connection.boundResultInfo[id]?.get()
+                    let value = try connection
+                        .boundContext
+                        .resultInfo[id]?
+                        .get()
                 
                     XCTAssertEqual(value, 1)
                     
