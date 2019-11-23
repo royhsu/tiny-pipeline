@@ -11,7 +11,7 @@ final class FirstResolvedElementPipelineTests: XCTestCase {
         
         let e = expectation(description: "")
         
-        let pipeline = FirstResolvedElementPipeline(
+        let pipeline = NewPipeline<Int, Error>(
             [
 //                Duplex(
 //                    id: "1",
@@ -37,7 +37,7 @@ final class FirstResolvedElementPipelineTests: XCTestCase {
             ]
         )
         
-        pipeline.execute { context in
+        pipeline.execute { 
             
             e.fulfill()
             

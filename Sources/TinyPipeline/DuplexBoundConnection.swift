@@ -17,7 +17,7 @@ final class DuplexBoundConnection<Success, Failure> where Failure: Error {
     /// - parameter onDisconnect: the disconnect handler.
     func autoconnect<Bound>(
         to bound: Bound,
-        duplexID: Duplex.ID,
+        duplexID: DuplexID,
         onDisconnect disconnect: @escaping () -> Void
     )
     where

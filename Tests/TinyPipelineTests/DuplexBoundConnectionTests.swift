@@ -21,7 +21,7 @@ final class DuplexBoundConnectionTests: XCTestCase {
         
         let connection = DuplexBoundConnection<Int, Error>()
         
-        let id = Duplex.ID()
+        let id = DuplexID()
         
         connection.autoconnect(
             to: Future { $0(.success(1)) },

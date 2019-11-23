@@ -20,7 +20,7 @@ final class DuplexBoundContextTests: XCTestCase {
         
         var context = DuplexBoundContext<Int, Error>()
         
-        let id1 = Duplex.ID()
+        let id1 = DuplexID()
         
         context.updateResult(.success(1), id: id1)
         
@@ -28,7 +28,7 @@ final class DuplexBoundContextTests: XCTestCase {
         
         XCTAssertEqual(try context.resultInfo[id1]?.get(), 1)
         
-        let id2 = Duplex.ID()
+        let id2 = DuplexID()
         
         context.updateResult(.success(2), id: id2)
         

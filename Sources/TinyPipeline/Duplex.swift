@@ -1,29 +1,11 @@
 // MARK: - Duplex
 
-import Foundation
-
-struct Duplex {
+struct Duplex<Success, Failure> where Failure: Error {
     
-    var id: ID
+    var id: DuplexID
     
-}
+    var inbound: (DuplexBoundContext<Success, Failure>) -> Future<Success, Failure>
 
-// MARK: - ID
-
-extension Duplex {
-    
-    struct ID {
-        
-        var rawValue = UUID()
-        
-    }
+    var outbound: (DuplexBoundContext<Success, Failure>) -> Future<Success, Failure>
 
 }
-
-// MARK: - RawRepresentable
-
-extension Duplex.ID: RawRepresentable { }
-
-// MARK: - Hashable
-
-extension Duplex.ID: Hashable { }

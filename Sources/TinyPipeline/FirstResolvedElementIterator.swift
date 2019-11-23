@@ -5,14 +5,16 @@ struct FirstResolvedElementIterator<Element, Output> {
     
     var elements: [Element]
     
-    var context: () -> PipelineContext<Output>
+//    var context: () -> PipelineContext<Output>
     
     mutating func next() -> Element? {
         
-        let isValueResolved = (context().resolvedValue != nil)
+        return nil
         
-        if isValueResolved { return nil }
-        else { return elements.isEmpty ? nil : elements.removeFirst() }
+//        let isValueResolved = (context().resolvedValue != nil)
+//
+//        if isValueResolved { return nil }
+//        else { return elements.isEmpty ? nil : elements.removeFirst() }
         
     }
     
