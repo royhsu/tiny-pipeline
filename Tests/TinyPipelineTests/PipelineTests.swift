@@ -27,7 +27,16 @@ final class PipelineTests: XCTestCase {
                         
                         XCTAssert(context.resultInfo.isEmpty)
                         
-                        return Future { $0(.success(3)) } // Set the initial number.
+                        return Future { promise in
+                            
+                            DispatchQueue.global(qos: .background).async {
+                                
+                                // Set the initial number.
+                                promise(.success(3))
+                            
+                            }
+                            
+                        }
                         
                     },
                     outbound: { id, context in
@@ -41,7 +50,16 @@ final class PipelineTests: XCTestCase {
                             [ id2: .success(16), ]
                         )
                         
-                        return Future { $0(.success(16 - 1)) } // Decrease the number.
+                        return Future { promise in
+                            
+                            DispatchQueue.global(qos: .background).async {
+                                
+                                // Decrease the number.
+                                promise(.success(16 - 1))
+                            
+                            }
+                            
+                        }
 
                     }
                 ),
@@ -58,7 +76,16 @@ final class PipelineTests: XCTestCase {
                             [ id1: .success(3), ]
                         )
                         
-                        return Future { $0(.success(3 + 1)) } // Increase the number.
+                        return Future { promise in
+                            
+                            DispatchQueue.global(qos: .background).async {
+                                
+                                // Increase the number.
+                                promise(.success(3 + 1))
+                            
+                            }
+                            
+                        }
                         
                     },
                     outbound: { id, context in
@@ -75,7 +102,16 @@ final class PipelineTests: XCTestCase {
                             ]
                         )
                         
-                        return Future { $0(.success(4 * 4)) } // Square the number.
+                        return Future { promise in
+                            
+                            DispatchQueue.global(qos: .background).async {
+                                
+                                // Square the number.
+                                promise(.success(4 * 4))
+                            
+                            }
+                            
+                        }
 
                     }
                 ),
