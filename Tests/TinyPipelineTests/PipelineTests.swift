@@ -140,3 +140,11 @@ final class PipelineTests: XCTestCase {
     }
     
 }
+
+extension PipelineTests {
+    
+    static var allTests = [
+        ("testSinkPipeline", testSinkPipeline),
+    ]
+    
+}
