@@ -1,6 +1,6 @@
 // MARK: - DuplexBoundContext
 
-struct DuplexBoundContext<Success, Failure> where Failure: Error {
+public struct DuplexBoundContext<Success, Failure> where Failure: Error {
       
     private(set) var resultInfo = DuplexBoundResultInfo<Success, Failure>()
     
@@ -25,7 +25,7 @@ struct DuplexBoundContext<Success, Failure> where Failure: Error {
 
 extension DuplexBoundContext {
     
-    var finalResult: Result<Success, Failure>? {
+    public var finalResult: Result<Success, Failure>? {
         
         guard let finalResultID = finalResultID else { return nil }
         

@@ -2,18 +2,25 @@
 
 import TinyCombine
 
-struct Duplex<Success, Failure> where Failure: Error {
+public struct Duplex<Success, Failure> where Failure: Error {
     
-    var id = DuplexID()
+    public typealias Bound = (DuplexID, DuplexBoundContext<Success, Failure>) -> AnyPublisher<Success, Failure>
     
-    var inbound: (DuplexID, DuplexBoundContext<Success, Failure>) -> AnyPublisher<Success, Failure>
+    public var id: DuplexID
     
-    var outbound: (DuplexID, DuplexBoundContext<Success, Failure>) -> AnyPublisher<Success, Failure> = { _, context in
+    public var inbound: Bound
+    
+    public var outbound: Bound
+
+}
+
+extension Duplex {
+    
+    public init(inbound: @escaping Bound, outboud: @escaping Bound) {
         
-        // The default outbound only aggregates the given result.
-        Future { $0(context.finalResult!) }.eraseToAnyPublisher()
+        self.init(id: DuplexID(), inbound: inbound, outbound: outboud)
         
     }
-
+    
 }
 

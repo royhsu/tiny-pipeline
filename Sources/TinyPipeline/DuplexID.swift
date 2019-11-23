@@ -2,9 +2,11 @@
 
 import Foundation
 
-struct DuplexID {
+public struct DuplexID {
         
-    var rawValue = UUID()
+    public var rawValue: UUID
+    
+    public init(rawValue: UUID = UUID()) { self.rawValue = rawValue }
 
 }
 
