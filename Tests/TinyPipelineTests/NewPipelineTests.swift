@@ -11,35 +11,51 @@ final class FirstResolvedElementPipelineTests: XCTestCase {
         
         let e = expectation(description: "")
         
+        let id1 = DuplexID()
+        
         let pipeline = NewPipeline<Int, Error>(
             [
-//                Duplex(
-//                    id: "1",
-//                    inbound: { context in
-//
-//                        fatalError()
-//
-//                        let input: Void = ()
-//
-//                        return Future<Void, Error> { promise in promise(.success(input)) }
-//
-//                    },
-//                    outbound: { context in
-//
-//                        fatalError()
-//
-//                        let output = ()
-//
-//                        return Future<Void, Error> { promise in promise(.success(output)) }
-//
-//                    }
-//                ),
+                Duplex(
+                    id: id1,
+                    inbound: { id, context in // get value.
+                        
+                        return Future { $0(.success(3)) }
+
+                    },
+                    outbound: { id, context in // square value.
+                        
+                        return Future { promise in
+                            
+                            do {
+                            
+                                let finalResult = try XCTUnwrap(context.finalResult)
+                                
+                                let value = try finalResult.get()
+                                
+                                promise(.success(value * value))
+                                
+                            }
+                            catch { promise(.failure(error)) }
+                            
+                        }
+
+                    }
+                ),
             ]
         )
         
-        pipeline.execute { 
+        pipeline.execute { result in
             
-            e.fulfill()
+            defer { e.fulfill() }
+            
+            do {
+            
+                let value = try result.get()
+
+                XCTAssertEqual(value, 9)
+                
+            }
+            catch { XCTFail("\(error)") }
             
         }
 

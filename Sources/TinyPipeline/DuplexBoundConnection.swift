@@ -44,7 +44,10 @@ final class DuplexBoundConnection<Success, Failure> where Failure: Error {
                     
                 case let .failure(error):
                     
-                    self.boundContext.updateResult(.failure(error), id: duplexID)
+                    self.boundContext.updateResult(
+                        .failure(error),
+                        id: duplexID
+                    )
                     
                 }
                 
