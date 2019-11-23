@@ -37,6 +37,7 @@ final class PipelineTests: XCTestCase {
                             }
                             
                         }
+                            .eraseToAnyPublisher()
                         
                     },
                     outbound: { id, context in
@@ -60,6 +61,7 @@ final class PipelineTests: XCTestCase {
                             }
                             
                         }
+                            .eraseToAnyPublisher()
 
                     }
                 ),
@@ -86,6 +88,7 @@ final class PipelineTests: XCTestCase {
                             }
                             
                         }
+                            .eraseToAnyPublisher()
                         
                     },
                     outbound: { id, context in
@@ -112,6 +115,7 @@ final class PipelineTests: XCTestCase {
                             }
                             
                         }
+                            .eraseToAnyPublisher()
 
                     }
                 ),

@@ -74,7 +74,7 @@ final class Pipeline<Output, Failure> where Failure: Error {
     }
     
     private func nextDuplex()
-    -> (id: DuplexID, bound: Future<Output, Failure>, kind: DuplexBoundKind)? {
+    -> (id: DuplexID, bound: AnyPublisher<Output, Failure>, kind: DuplexBoundKind)? {
         
         let resolvedInboundDuplexIDs = inboundConnection
             .boundContext
