@@ -2,15 +2,21 @@
 
 import TinyCombine
 
-final class Pipeline<Success, Failure> where Failure: Error {
+final class Pipeline<Output, Failure> where Failure: Error {
     
-    private let inboundConnection = DuplexBoundConnection<Success, Failure>()
+    private let inboundConnection = DuplexBoundConnection<Output, Failure>()
     
-    private let outboundConnection = DuplexBoundConnection<Success, Failure>()
+    private let outboundConnection = DuplexBoundConnection<Output, Failure>()
     
-    private let elements: [Duplex<Success, Failure>]
+    private let elements: [Duplex<Output, Failure>]
     
-    init(_ elements: [Duplex<Success, Failure>]) {
+    private lazy var future = Future<Output, Failure> { [weak self] promise in
+        
+        self?.processRemainingDuplex(completion: promise)
+        
+    }
+    
+    init(_ elements: [Duplex<Output, Failure>]) {
         
         guard !elements.isEmpty else {
             
@@ -18,23 +24,23 @@ final class Pipeline<Success, Failure> where Failure: Error {
             
         }
         
+        guard Set(elements.map { $0.id }).count == elements.count else {
+            
+            preconditionFailure("Duplex id must be unique.")
+            
+        }
+        
         self.elements = elements
         
     }
     
-    func execute(completion: @escaping (Result<Success, Failure>) -> Void) {
-        
-        processRemainingDuplex(completion: completion)
-        
-    }
-    
     private func processRemainingDuplex(
-        completion: @escaping (Result<Success, Failure>) -> Void
+        completion: @escaping (Result<Output, Failure>) -> Void
     ) {
         
         if let (id, bound, kind) = nextDuplex() {
 
-            let connection: DuplexBoundConnection<Success, Failure>
+            let connection: DuplexBoundConnection<Output, Failure>
             
             switch kind {
                 
@@ -68,7 +74,7 @@ final class Pipeline<Success, Failure> where Failure: Error {
     }
     
     private func nextDuplex()
-    -> (id: DuplexID, bound: Future<Success, Failure>, kind: DuplexBoundKind)? {
+    -> (id: DuplexID, bound: Future<Output, Failure>, kind: DuplexBoundKind)? {
         
         let resolvedInboundDuplexIDs = inboundConnection
             .boundContext
@@ -93,7 +99,7 @@ final class Pipeline<Success, Failure> where Failure: Error {
             .resultInfo
             .keys
             
-        if let nextOutboundDuplex = elements.first(
+        if let nextOutboundDuplex = elements.last(
             where: { !resolvedOutboundDuplexIDs.contains($0.id) }
         ) {
             
@@ -114,4 +120,16 @@ final class Pipeline<Success, Failure> where Failure: Error {
         
     }
     
+}
+
+// MARK: - Publisher
+
+extension Pipeline: Publisher {
+
+    func receive<S>(_ subscriber: S)
+    where
+        S: Subscriber,
+        S.Input == Output,
+        S.Failure == Failure { future.receive(subscriber) }
+
 }
