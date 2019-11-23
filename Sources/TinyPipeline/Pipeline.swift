@@ -12,7 +12,7 @@ final class Pipeline<Output, Failure> where Failure: Error {
     
     private lazy var future = Future<Output, Failure> { [weak self] promise in
         
-        self?.processRemainingDuplex(completion: promise)
+        self?.processRemainingDuplexes(completion: promise)
         
     }
     
@@ -34,7 +34,7 @@ final class Pipeline<Output, Failure> where Failure: Error {
         
     }
     
-    private func processRemainingDuplex(
+    private func processRemainingDuplexes(
         completion: @escaping (Result<Output, Failure>) -> Void
     ) {
         
@@ -55,7 +55,7 @@ final class Pipeline<Output, Failure> where Failure: Error {
                 duplexID: id,
                 onDisconnect: {
 
-                    self.processRemainingDuplex(completion: completion)
+                    self.processRemainingDuplexes(completion: completion)
                     
                 }
             )
