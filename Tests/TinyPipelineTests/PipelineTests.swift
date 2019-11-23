@@ -7,7 +7,7 @@ import XCTest
 
 final class PipelineTests: XCTestCase {
     
-    func testSinkPipeline() {
+    func testSink() {
         
         let pipelineDidComplete = expectation(description: "The pipeline did complete.")
         
@@ -148,7 +148,7 @@ final class PipelineTests: XCTestCase {
 extension PipelineTests {
     
     static var allTests = [
-        ("testSinkPipeline", testSinkPipeline),
+        ("testSink", testSink),
     ]
     
 }

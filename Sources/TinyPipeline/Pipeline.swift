@@ -2,6 +2,9 @@
 
 import TinyCombine
 
+/// Pipeline process duplexes one by one and passing corresponding context between them.
+/// The idea is quite similiar to channel pipeline in SwiftNIO.
+/// See the following link for more detailed explanation. [How to understand InboundIn InboundOut OutboundOut OutboundIn names](https://forums.swift.org/t/how-to-understand-inboundin-inboundout-outboundout-outboundin-names/30989/5)
 final class Pipeline<Output, Failure> where Failure: Error {
     
     private let inboundConnection = DuplexBoundConnection<Output, Failure>()

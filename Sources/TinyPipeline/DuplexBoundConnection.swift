@@ -2,6 +2,7 @@
 
 import TinyCombine
 
+/// Connection manages context for all related bounds.
 final class DuplexBoundConnection<Success, Failure> where Failure: Error {
 
     /// The current connected inbound/outbound stream of duplex.
