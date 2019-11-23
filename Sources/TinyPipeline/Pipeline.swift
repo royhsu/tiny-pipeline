@@ -102,7 +102,7 @@ final class Pipeline<Success, Failure> where Failure: Error {
             let outbound = nextOutboundDuplex.outbound(
                 nextOutboundDuplex.id,
                 isBeginningOfOutbounds
-                    ? inboundConnection.boundContext // The first outbound replies on the result from the last inbound.
+                    ? inboundConnection.boundContext // The first outbound relies on the result from the last inbound.
                     : outboundConnection.boundContext
             )
             
