@@ -11,7 +11,7 @@ final class Pipeline<Output, Failure> where Failure: Error {
     
     private let outboundConnection = DuplexBoundConnection<Output, Failure>()
     
-    private let elements: [Duplex<Output, Failure>]
+    private let elements: AnyBidirectionalCollection<Duplex<Output, Failure>>
     
     private lazy var future = Future<Output, Failure> { [weak self] promise in
         
@@ -19,7 +19,10 @@ final class Pipeline<Output, Failure> where Failure: Error {
         
     }
     
-    init(_ elements: [Duplex<Output, Failure>]) {
+    init<C>(_ elements: C)
+    where
+        C: BidirectionalCollection,
+        C.Element == Duplex<Output, Failure> {
         
         guard !elements.isEmpty else {
             
@@ -33,7 +36,7 @@ final class Pipeline<Output, Failure> where Failure: Error {
             
         }
         
-        self.elements = elements
+        self.elements = AnyBidirectionalCollection(elements)
         
     }
     
