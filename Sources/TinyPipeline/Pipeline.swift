@@ -1,265 +1,141 @@
 // MARK: - Pipeline
 
-#warning("TODO: [Priority: high] need a timeout / counter mechanism to opt-in finite execution. default is infinite.")
-#warning("TODO: [Priority: high] event callbacks for resolved by current handler & resolved by next handler.")
-struct Pipeline<Output> {
+import TinyCombine
+
+/// Pipeline process duplexes one by one and passing corresponding context between them.
+/// The idea is quite similiar to channel pipeline in SwiftNIO.
+/// See the following link for more detailed explanation. [How to understand InboundIn InboundOut OutboundOut OutboundIn names](https://forums.swift.org/t/how-to-understand-inboundin-inboundout-outboundout-outboundin-names/30989/5)
+public final class Pipeline<Output, Failure> where Failure: Error {
     
-    var elementContainers: [ElementContainer]
+    private let inboundConnection = DuplexBoundConnection<Output, Failure>()
     
-    init(elements: [Element]) {
+    private let outboundConnection = DuplexBoundConnection<Output, Failure>()
+    
+    private let elements: AnyBidirectionalCollection<Duplex<Output, Failure>>
+    
+    private lazy var future = Future<Output, Failure> { [weak self] promise in
         
-        self.elementContainers = zip(elements.indices, elements)
-            .map(ElementContainer.init)
-        
-    }
-    
-}
-
-extension Pipeline {
-    
-    #warning("TODO: [Priority: high] should replace resolvedByElementKind with resolvedByElementID.")
-    typealias ResolvingHandler = Future<(resolvedByElementKind: ElementKind, output: Output), PipelineError>
-    
-    /// Resolve first by the current handler, if it fails, then fallbacks to the next handler.
-    ///
-    /// - Returns: A new handler that chains the current and next handler.
-    static func resolveCurrentElementHandler(
-        _ currentElementHandler: @escaping Future<Output, PipelineError>,
-        ifFailureThenTryNextElementHandler nextElementHandler: @escaping Future<Output, PipelineError>
-    )
-    -> ResolvingHandler {
-        
-         { promise in
-
-            currentElementHandler { currentResult in
-
-                do { try promise(.success((.current, currentResult.get()))) }
-                catch {
-
-                    nextElementHandler { nextResult in
-                        
-                        promise(nextResult.map { (.next, $0) })
-                        
-                    }
-
-                }
-
-            }
-
-        }
+        self?.processRemainingDuplexes(completion: promise)
         
     }
     
-    static func resolvingHandler(
-        _ resolvingHandler: @escaping ResolvingHandler,
-        didResolve: ((ElementKind) -> Future<Void, PipelineError>)?
-    )
-    -> Future<Output, PipelineError> {
+    public init<C>(_ elements: C)
+    where
+        C: BidirectionalCollection,
+        C.Element == Duplex<Output, Failure> {
         
-        { promise in
+        guard !elements.isEmpty else {
             
-            resolvingHandler { resolvedResult in
-                
-                do {
-                    
-                    let content = try resolvedResult.get()
-                
-                    guard let didResolveHandler = didResolve?(content.resolvedByElementKind) else {
-                        
-                        promise(.success(content.output))
-                        
-                        return
-                        
-                    }
-                        
-                    didResolveHandler { eventResult in
-                        
-                        do {
-                            
-                            _ = try eventResult.get()
-                            
-                            promise(.success(content.output))
-                            
-                        }
-                        catch { promise(.failure(error as! PipelineError)) }
-                        
-                    }
-                    
-                }
-                catch { promise(.failure(error as! PipelineError)) }
-                
-            }
+            preconditionFailure("Must contains at least one duplex.")
             
         }
         
+        guard Set(elements.map { $0.id }).count == elements.count else {
+            
+            preconditionFailure("Duplex id must be unique.")
+            
+        }
+        
+        self.elements = AnyBidirectionalCollection(elements)
+        
     }
     
-    private static func handleOnResolve(
-        kind: ElementKind,
-        ForCurrentElement currentElement: Element,
-        nextElement: Element
-    )
-    -> Future<Void, PipelineError> {
+    private func processRemainingDuplexes(
+        completion: @escaping (Result<Output, Failure>) -> Void
+    ) {
         
-        { promise in
+        if let (id, bound, kind) = nextDuplex() {
 
+            let connection: DuplexBoundConnection<Output, Failure>
+            
             switch kind {
                 
-            case .current:
+            case .inbound: connection = inboundConnection
                 
-                guard let currentElementOnResolveHandler = currentElement._onResolve?(.current) else {
-                    
-                    promise(.success(()))
-                    
-                    return
-                    
-                }
-                
-                currentElementOnResolveHandler(promise)
-                
-            case .next:
-                
-                if let nextElementOnResolveHandler = nextElement._onResolve?(.current) {
-                    
-                    nextElementOnResolveHandler { _ in
-                        
-                        guard let currentElementOnResolveHandler = currentElement._onResolve?(.next) else {
-                            
-                            promise(.success(()))
-                            
-                            return
-                            
-                        }
-                        
-                        currentElementOnResolveHandler(promise)
-                        
-                    }
-                    
-                }
-                else {
-                    
-                    guard let currentElementOnResolveHandler = currentElement._onResolve?(.next) else {
-                        
-                        promise(.success(()))
-                        
-                        return
-                        
-                    }
-                    
-                    currentElementOnResolveHandler(promise)
-                    
-                }
+            case .outbound: connection = outboundConnection
                 
             }
             
-        }
-        
-    }
-    
-    func execute(completion: Promise<Output, PipelineError>? = nil) {
-        
-        let defaultHandler: Future<Output, PipelineError> = { promise in
-            
-            promise(.failure(.unhandledPipeline))
-            
-        }
-                
-        let startElement: Element? = nil
-        
-        let finalElement = elementContainers
-            .reduce(startElement) { currentElement, nextElementContainer in
-                
-                guard let currentElement = currentElement else {
-                    
-                    return nextElementContainer.element
+            connection.autoconnect(
+                to: bound,
+                duplexID: id,
+                onDisconnect: {
+
+                    self.processRemainingDuplexes(completion: completion)
                     
                 }
+            )
+
+        }
+        else {
+
+            guard
+                let finalResult = outboundConnection.boundContext.finalResult
+            else { preconditionFailure("Must contain at least one result.") }
+
+            completion(finalResult)
+
+        }
+        
+    }
+    
+    private func nextDuplex()
+    -> (id: DuplexID, bound: AnyPublisher<Output, Failure>, kind: DuplexBoundKind)? {
+        
+        let resolvedInboundDuplexIDs = inboundConnection
+            .boundContext
+            .resultInfo
+            .keys
+        
+        if let nextInboundDuplex = elements.first(
+            where: { !resolvedInboundDuplexIDs.contains($0.id) }
+        ) {
+        
+            let inbound = nextInboundDuplex.inbound(
+                nextInboundDuplex.id,
+                inboundConnection.boundContext
+            )
+            
+            return (nextInboundDuplex.id, inbound, .inbound)
+            
+        }
+            
+        let resolvedOutboundDuplexIDs = outboundConnection
+            .boundContext
+            .resultInfo
+            .keys
+            
+        if let nextOutboundDuplex = elements.last(
+            where: { !resolvedOutboundDuplexIDs.contains($0.id) }
+        ) {
+            
+            let isBeginningOfOutbounds = (outboundConnection.boundContext.finalResultID == nil)
+            
+            let outbound = nextOutboundDuplex.outbound(
+                nextOutboundDuplex.id,
+                isBeginningOfOutbounds
+                    ? inboundConnection.boundContext // The first outbound relies on the result from the last inbound.
+                    : outboundConnection.boundContext
+            )
+            
+            return (nextOutboundDuplex.id, outbound, .outbound)
                 
-                let resolvingHandler = Self.resolveCurrentElementHandler(
-                    currentElement.handler,
-                    ifFailureThenTryNextElementHandler: nextElementContainer.element.handler
-                )
-
-                let newElement = Element(
-                    handler: Self.resolvingHandler(
-                        resolvingHandler,
-                        didResolve: { kind in
-                        
-                            Self.handleOnResolve(
-                                kind: kind,
-                                ForCurrentElement: currentElement,
-                                nextElement: nextElementContainer.element
-                            )
-                            
-                        }
-                    )
-                )
-            
-            return newElement
-            
         }
-        
-        (finalElement?.handler ?? defaultHandler) { completion?($0) }
+                
+        return nil
         
     }
     
 }
 
-// MARK: - Future
+// MARK: - Publisher
 
-typealias Future<Output, Failure: Error> = (@escaping Promise<Output, Failure>) -> Void
+extension Pipeline: Publisher {
 
-typealias Promise<Output, Failure: Error> = (Result<Output, Failure>) -> Void
+    public func receive<S>(_ subscriber: S)
+    where
+        S: Subscriber,
+        S.Input == Output,
+        S.Failure == Failure { future.receive(subscriber) }
 
-// MARK: - Element
-
-extension Pipeline {
-    
-    enum ElementKind {
-        
-        case current, next
-        
-    }
-    
-    struct Element {
-        
-        private(set) var _onResolve: ((ElementKind) -> Future<Void, PipelineError>)?
-        
-        var handler: Future<Output, PipelineError>
-        
-        func onResolve(
-            perform: @escaping (ElementKind) -> Future<Void, PipelineError>
-        )
-        -> Element {
-            
-            var element = self
-            
-            element._onResolve = perform
-            
-            return element
-            
-        }
-        
-    }
-    
-    struct ElementContainer {
-        
-        /// Equivalent to index of the element.
-        var id: Int
-        
-        var element: Element
-        
-    }
-    
-}
-
-// MARK: - PipelineError
-
-enum PipelineError: Error {
-    
-    case unhandledPipeline
-    
-    /// Failure from element.
-    case elementFailure(Error)
-    
 }

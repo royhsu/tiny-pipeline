@@ -1,388 +1,144 @@
 // MARK: - PipelineTests
 
+import TinyCombine
 import XCTest
 
 @testable import TinyPipeline
 
 final class PipelineTests: XCTestCase {
     
-    func testInitialize() {
+    func testSink() {
         
-        let pipeline = Pipeline<Void>(
-            elements: [ .init { _ in }, .init { _ in }, .init { _ in }, ]
-        )
+        let pipelineDidComplete = expectation(description: "The pipeline did complete.")
         
-        XCTAssertEqual(pipeline.elementContainers.map { $0.id }, [ 0, 1, 2 ])
+        let id1 = DuplexID()
         
-    }
-    
-    func testResolveWithSuccessByCurrentHandler() {
+        let id2 = DuplexID()
         
-        let didEmitResolveEvent = expectation(description: "Did emit a resolve event.")
-        
-        let didCompleteResolveAndEvents = expectation(description: "Did complete resolve and events.")
-        
-        var isResolved = false
-        
-        let resolvingHandler = Pipeline.resolveCurrentElementHandler(
-            { $0(.success("current")) },
-            ifFailureThenTryNextElementHandler: { $0(.success("next")) }
-        )
-        
-        let finalHandler = Pipeline.resolvingHandler(
-            resolvingHandler,
-            didResolve: { kind in
-                
-                didEmitResolveEvent.fulfill()
-                
-                return { promise in
-                    
-                    XCTAssertFalse(isResolved)
-                    
-                    XCTAssertEqual(kind, .current)
-                    
-                    promise(.success(()))
-                    
-                }
-                
-            }
-        )
-        
-        finalHandler { result in
-            
-            defer { didCompleteResolveAndEvents.fulfill() }
-            
-            do {
-                
-                let output = try result.get()
-                
-                XCTAssertEqual(output, "current")
-                
-            }
-            catch { XCTFail("\(error)") }
-            
-        }
-        
-        waitForExpectations(timeout: 10.0)
-        
-    }
-    
-    func testResolveWithSuccessByNextHandler() {
-        
-        let didEmitResolveEvent = expectation(description: "Did emit a resolve event.")
-        
-        let didCompleteResolveAndEvents = expectation(description: "Did complete resolve and events.")
-        
-        var isResolved = false
-        
-        let resolvingHandler = Pipeline.resolveCurrentElementHandler(
-            { $0(.failure(.unhandledPipeline)) },
-            ifFailureThenTryNextElementHandler: { $0(.success("next")) }
-        )
-        
-        let finalHandler = Pipeline.resolvingHandler(
-            resolvingHandler,
-            didResolve: { kind in
-                
-                didEmitResolveEvent.fulfill()
-                
-                return { promise in
-                    
-                    XCTAssertFalse(isResolved)
-                    
-                    XCTAssertEqual(kind, .next)
-                    
-                    promise(.success(()))
-                    
-                }
-                
-            }
-        )
-        
-        finalHandler { result in
-            
-            defer { didCompleteResolveAndEvents.fulfill() }
-            
-            do {
-                
-                let output = try result.get()
-                
-                XCTAssertEqual(output, "next")
-                
-            }
-            catch { XCTFail("\(error)") }
-            
-        }
-        
-        waitForExpectations(timeout: 10.0)
-        
-    }
-
-    func testResolveWithFailureFromNextHandlerEventually() {
-
-        struct NextHandlerError: Error, Equatable {
-            
-            var id: Int
-            
-        }
-        
-        let didResolveWithFailureFromNextHandler = expectation(description: "Did resolve with a failure from the next handler eventually.")
-        
-        let resolvingHandler = Pipeline<String>.resolveCurrentElementHandler(
-            { $0(.failure(.unhandledPipeline)) },
-            ifFailureThenTryNextElementHandler: { promise in
-                
-                promise(.failure(.elementFailure(NextHandlerError(id: 1))))
-                
-            }
-        )
-        
-        let finalHandler = Pipeline.resolvingHandler(
-            resolvingHandler,
-            didResolve: { kind in
-                
-                { promise in
-                    
-                    XCTFail("SHOULD NOT emit the did resolve event.")
-                    
-                    promise(.success(()))
-                    
-                }
-                
-            }
-        )
-        
-        finalHandler { result in
-            
-            do {
-                
-                _ = try result.get()
-                
-                XCTFail("It's supposed to be failed.")
-                
-            }
-            catch let error as PipelineError {
-                
-                guard case let .elementFailure(elementError) = error else {
-                    
-                    XCTFail("Unexpected error: \(error).")
-                    
-                    return
-                    
-                }
-                
-                XCTAssertEqual(
-                    elementError as? NextHandlerError,
-                    NextHandlerError(id: 1)
-                )
-                
-                didResolveWithFailureFromNextHandler.fulfill()
-                
-            }
-            catch { XCTFail("Unexpected error: \(error).") }
-            
-        }
-        
-        waitForExpectations(timeout: 10.0)
-        
-    }
-    
-    func testResolveWithSuccessButFailureInEvents() {
-        
-        struct DidResolveEventError: Error, Equatable {
-            
-            var id: Int
-            
-        }
-        
-        let didEmitResolveEvent = expectation(description: "Did emit a resolve event.")
-        
-        let didCompleteResolveAndEvents = expectation(description: "Did complete resolve and events.")
-        
-        var isResolved = false
-        
-        let resolvingHandler = Pipeline.resolveCurrentElementHandler(
-            { $0(.success("current")) },
-            ifFailureThenTryNextElementHandler: { $0(.success("next")) }
-        )
-        
-        let finalHandler = Pipeline.resolvingHandler(
-            resolvingHandler,
-            didResolve: { kind in
-                
-                didEmitResolveEvent.fulfill()
-                
-                return { promise in
-                    
-                    XCTAssertFalse(isResolved)
-                    
-                    XCTAssertEqual(kind, .current)
-                    
-                    promise(
-                        .failure(
-                            .elementFailure(
-                                DidResolveEventError(id: 1)
-                            )
+        let pipeline = Pipeline<Int, DuplexError>(
+            [
+                Duplex(
+                    id: id1,
+                    inbound: { id, context in
+                      
+                        XCTAssertEqual(id, id1)
+                      
+                        XCTAssertNil(context.finalResultID)
+                        
+                        XCTAssert(context.resultInfo.isEmpty)
+                        
+                        return Future { promise in
+                            
+                            DispatchQueue.global(qos: .background).async {
+                                
+                                // Set the initial number.
+                                promise(.success(3))
+                            
+                            }
+                            
+                        }
+                            .eraseToAnyPublisher()
+                        
+                    },
+                    outbound: { id, context in
+                        
+                        XCTAssertEqual(id, id1)
+                        
+                        XCTAssertEqual(context.finalResultID, id2)
+                          
+                        XCTAssertEqual(
+                            context.resultInfo,
+                            [ id2: .success(16), ]
                         )
-                    )
-                    
-                }
-                
-            }
-        )
-        
-        finalHandler { result in
-            
-            defer { didCompleteResolveAndEvents.fulfill() }
-            
-            do {
-                
-                _ = try result.get()
-                
-                XCTFail("It's supposed to be failed.")
-                
-            }
-            catch let error as PipelineError {
-                
-                guard case let .elementFailure(elementFailure) = error else {
-                    
-                    XCTFail("Unexpected error: \(error).")
-                    
-                    return
-                    
-                }
-                
-                XCTAssertEqual(
-                    elementFailure as? DidResolveEventError,
-                    DidResolveEventError(id: 1)
-                )
-                
-            }
-            catch { XCTFail("Unexpected error: \(error).") }
-            
-        }
-        
-        waitForExpectations(timeout: 10.0)
-        
-    }
-    
-    func testExecutePipeline() {
-        
-        struct Passthrough: Error { }
-        
-        let didEmitResolveEvent = expectation(description: "Did emit a resolve event.")
-        
-        didEmitResolveEvent.expectedFulfillmentCount = 2
-        
-        let didCompleteResolveAndEvents = expectation(description: "Did complete resolve and events.")
-        
-        var isResolved = false
-        
-        let pipeline = Pipeline<String>(
-            elements: [
-                Pipeline.Element { promise in
-                    
-                    DispatchQueue.global().async {
                         
-                        promise(.failure(.elementFailure(Passthrough())))
-                        
-                    }
-
-                }
-                    .onResolve { kind in
-                        
-                        #warning("TODO: [Priority: high] won't be called.")
-                        didEmitResolveEvent.fulfill()
-                        
-                        return { promise in
+                        return Future { promise in
                             
-                            XCTAssertFalse(isResolved)
+                            DispatchQueue.global(qos: .background).async {
+                                
+                                // Decrease the number.
+                                promise(.success(16 - 1))
                             
-                            XCTAssertEqual(kind, .next)
-                            
-                            promise(.success(()))
+                            }
                             
                         }
-                        
-                    },
-                Pipeline.Element { promise in
-                    
-                    DispatchQueue.global().async {
-                        
-                        promise(.failure(.elementFailure(Passthrough())))
-                        
-                    }
+                            .eraseToAnyPublisher()
 
-                }
-                    .onResolve { kind in
+                    }
+                ),
+                Duplex(
+                    id: id2,
+                    inbound: { id, context in
+                      
+                        XCTAssertEqual(id, id2)
                         
-                        didEmitResolveEvent.fulfill()
+                        XCTAssertEqual(context.finalResultID, id1)
                         
-                        return { promise in
+                        XCTAssertEqual(
+                            context.resultInfo,
+                            [ id1: .success(3), ]
+                        )
+                        
+                        return Future { promise in
                             
-                            XCTAssertFalse(isResolved)
+                            DispatchQueue.global(qos: .background).async {
+                                
+                                // Increase the number.
+                                promise(.success(3 + 1))
                             
-                            XCTAssertEqual(kind, .next)
-                            
-                            promise(.success(()))
+                            }
                             
                         }
+                            .eraseToAnyPublisher()
                         
                     },
-                Pipeline.Element { promise in
-                    
-                    DispatchQueue.global().async { promise(.success("second")) }
-
-                }
-                    .onResolve { kind in
+                    outbound: { id, context in
                         
-                        didEmitResolveEvent.fulfill()
+                        XCTAssertEqual(id, id2)
                         
-                        return { promise in
+                        XCTAssertEqual(context.finalResultID, id2)
+                          
+                        XCTAssertEqual(
+                            context.resultInfo,
+                            [
+                                id1: .success(3),
+                                id2: .success(4),
+                            ]
+                        )
+                        
+                        return Future { promise in
                             
-                            XCTAssertFalse(isResolved)
+                            DispatchQueue.global(qos: .background).async {
+                                
+                                // Square the number.
+                                promise(.success(4 * 4))
                             
-                            XCTAssertEqual(kind, .current)
-                            
-                            promise(.success(()))
+                            }
                             
                         }
-                        
-                    },
-                Pipeline.Element { promise in
-                    
-                    DispatchQueue.global().async {
-                        
-                        promise(.failure(.elementFailure(Passthrough())))
-                        
-                    }
+                            .eraseToAnyPublisher()
 
-                }
-                    .onResolve { kind in
-                        
-                        XCTFail("SHOULD NOT emit the resolve event, it's been resolved by the previous element.")
-                        
-                        return { promise in promise(.success(())) }
-                        
                     }
+                ),
             ]
         )
-        
-        pipeline.execute { result in
-            
-            defer { didCompleteResolveAndEvents.fulfill() }
-            
-            do {
+
+        let stream = pipeline.sink(
+            receiveCompletion: { completion in
+
+                defer { pipelineDidComplete.fulfill() }
                 
-                let output = try result.get()
-                
-                XCTAssertEqual(output, "second")
-                
-            }
-            catch { XCTFail("\(error)") }
-            
-        }
-        
+                switch completion {
+
+                case .finished: break
+
+                case let .failure(error): XCTFail("\(error)")
+
+                }
+
+            },
+            receiveValue: { value in XCTAssertEqual(value, 15) }
+        )
+
         waitForExpectations(timeout: 10.0)
         
     }
@@ -392,12 +148,7 @@ final class PipelineTests: XCTestCase {
 extension PipelineTests {
     
     static var allTests = [
-        ("testInitialize", testInitialize),
-        ("testResolveWithSuccessByCurrentHandler", testResolveWithSuccessByCurrentHandler),
-        ("testResolveWithSuccessByNextHandler", testResolveWithSuccessByNextHandler),
-        ("testResolveWithFailureFromNextHandlerEventually", testResolveWithFailureFromNextHandlerEventually),
-        ("testResolveWithSuccessButFailureInEvents", testResolveWithSuccessButFailureInEvents),
-        ("testExecutePipeline", testExecutePipeline),
+        ("testSink", testSink),
     ]
     
 }
