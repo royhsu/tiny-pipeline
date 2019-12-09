@@ -1,6 +1,6 @@
 // MARK: - Duplex
 
-import TinyCombine
+import Combine
 
 public struct Duplex<Success, Failure> where Failure: Error {
     

@@ -1,6 +1,6 @@
 // MARK: - Pipeline
 
-import TinyCombine
+import Combine
 
 /// Pipeline process duplexes one by one and passing corresponding context between them.
 /// The idea is quite similiar to channel pipeline in SwiftNIO.
@@ -132,10 +132,10 @@ public final class Pipeline<Output, Failure> where Failure: Error {
 
 extension Pipeline: Publisher {
 
-    public func receive<S>(_ subscriber: S)
+    public func receive<S>(subscriber: S)
     where
         S: Subscriber,
         S.Input == Output,
-        S.Failure == Failure { future.receive(subscriber) }
+        S.Failure == Failure { future.receive(subscriber: subscriber) }
 
 }

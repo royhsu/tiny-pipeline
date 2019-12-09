@@ -1,6 +1,6 @@
 // MARK: - DuplexBoundConnectionTests
 
-import TinyCombine
+import Combine
 import XCTest
 
 @testable import TinyPipeline

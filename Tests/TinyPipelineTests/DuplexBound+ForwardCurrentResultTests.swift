@@ -1,6 +1,6 @@
 // MARK: - DuplexBound_ForwardCurrentResultTests
 
-import TinyCombine
+import Combine
 import XCTest
 
 @testable import TinyPipeline

@@ -1,6 +1,6 @@
 // MARK: - ForwardCurrentResult
 
-import TinyCombine
+import Combine
 
 /// Try to forward the current result from the given context. Only fallback to target bound when the context
 /// remains unresolved.

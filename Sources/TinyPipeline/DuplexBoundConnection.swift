@@ -1,6 +1,6 @@
 // MARK: - DuplexBoundConnection
 
-import TinyCombine
+import Combine
 
 /// Connection manages context for all related bounds.
 final class DuplexBoundConnection<Success, Failure> where Failure: Error {

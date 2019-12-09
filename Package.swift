@@ -4,13 +4,13 @@ import PackageDescription
 
 let package = Package(
     name: "TinyPipeline",
+    platforms: [ .iOS(.v13), .macOS(.v10_15), .tvOS(.v13), .watchOS(.v6), ],
     products: [ .library(name: "TinyPipeline", targets: ["TinyPipeline"]), ],
-    dependencies: [ .package(path: "../tiny-combine"), ],
     targets: [
-        .target(name: "TinyPipeline", dependencies: [ "TinyCombine", ]),
+        .target(name: "TinyPipeline"),
         .testTarget(
             name: "TinyPipelineTests",
-            dependencies: [ "TinyCombine", "TinyPipeline", ]
+            dependencies: [ "TinyPipeline", ]
         ),
     ]
 )
