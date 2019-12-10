@@ -16,9 +16,9 @@ public struct Duplex<Success, Failure> where Failure: Error {
 
 extension Duplex {
     
-    public init(inbound: @escaping Bound, outboud: @escaping Bound) {
+    public init(inbound: @escaping Bound, outbound: @escaping Bound) {
         
-        self.init(id: DuplexID(), inbound: inbound, outbound: outboud)
+        self.init(id: DuplexID(), inbound: inbound, outbound: outbound)
         
     }
     
